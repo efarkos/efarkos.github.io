@@ -9,20 +9,16 @@ function draw() {
     fill(0,127,0);
     ellipse(200, 200, 200, 200);
     fill(255, 0, 0);
-    star(200, 200, 100, 38, 5);
+    beginShape ();
+    vertex(200, 100);
+    vertex(222, 168);
+    vertex(293, 168);
+    vertex(235, 213);
+    vertex(257, 280);
+    vertex(200, 238);
+    vertex(143, 280);
+    vertex(165, 213);
+    vertex(107, 168);
+    vertex(178, 168);
+    endShape (CLOSE);
 }
-
-function star(x, y, radius1, radius2, npoints) {
-    let angle = TWO_PI / npoints;
-    let halfAngle = angle / 2.0;
-    beginShape();
-    for (let a = 0; a < TWO_PI; a += angle) {
-      let sx = x + cos(a + HALF_PI) * radius2;
-      let sy = y + sin(a + HALF_PI) * radius2;
-      vertex(sx, sy);
-      sx = x + cos(a + HALF_PI + halfAngle) * radius1;
-      sy = y + sin(a + HALF_PI + halfAngle) * radius1;
-      vertex(sx, sy);
-    }
-    endShape(CLOSE);
-  }
