@@ -1,0 +1,166 @@
+let bugs = [];
+let score, speed, timeRemaining;
+let animations;
+let gameOver;
+let clickSFX = new Tone.Players ({
+  slap: "assets/slap.mp3",
+  thud: "assets/thud.mp3"
+}).toDestination();
+
+let song, osc;
+let tune = ["C4", "G4", ["C4, B4"], ["G4, F4"], "A4"];
+
+osc = new Tone.Synth().toDestination();
+
+song = new Tone.Sequence(function(time,note){
+  osc.triggerAttackRelease(note, 0.8);
+}, tune, "4n");
+
+Tone.Transport.start();
+Tone.Transport.bpm.value = 200;
+
+function preload() {
+  animations = {
+    stand: { row: 0, frames: 1},
+    walk: {row: 0, col: 1, frames: 4},
+    crushed: {row: 1, col: 0, frames: 4},
+    dead: {row: 1, col: 4, frames: 1},
+  };
+
+  gameStart();
+}
+
+function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+
+  if(gameOver) {
+    gameDone();
+  } else {
+    playing();
+  }
+}
+
+function mousePressed() {
+  if(!gameOver) {
+    let bugKilled = false;
+    for (let i = 0; i < bugs.length; i++) {
+      if(bugs[i].sprite.mouse.pressing() && !bugs[i].dead) {
+        bugs[i].die();
+        bugKilled = true;
+        clickSFX.player('slap').start();
+      }
+    }
+    if(!bugKilled) {
+      clickSFX.player('thud').start();
+    }
+  }
+}
+
+function playing() {
+  for(let i = 0; i < bugs.length; i++) {
+    if(!bugs[i].dead) {
+      bugs[i].walk();
+    }
+  }
+
+  textSize (16);
+  text("Bugs Squished: " + score, 20, 20);
+  text("Time: " + ceil(timeRemaining), width-100, 20);
+
+  timeRemaining -= deltaTime / 1000;
+  if (timeRemaining < 0) {
+    gameOver = true;
+  }
+}
+
+function gameDone() {
+  text("Time's Up!", 100, 100);
+  text("Bugs Squished: " + score, 100, 150);
+  text("Refresh to play again.", 100, 200);
+  song.stop();
+
+  while(bugs.length > 0) {
+    bugs[0].remove();
+    bugs.pop();
+  }
+}
+
+function gameStart() {
+  score = 0;
+  speed = 1;
+  timeRemaining = 30;
+  gameOver = false;
+
+  // I think the comically loud slaps are funnier without this song playing...
+  Tone.start();
+  song.start();
+
+  for(let i = 0; i < 10; i++) {
+    makeBug();
+  }
+}
+
+function makeBug() {
+  xCoord = Math.floor(Math.random() * 361) + 20;
+  yCoord = Math.floor(Math.random() * 361) + 20;
+  rotation = Math.floor(Math.random() * 360);
+  rotation %= 360;
+  bugs.push(new Bug(xCoord, yCoord, 32, 32, 'assets/roach.png', animations, rotation));
+}
+
+class Bug {
+  constructor(x, y, width, height, spriteSheet, animations, rotation) {
+    this.sprite = new Sprite(x, y, width, height);
+    this.sprite.collider = 'kinematic';
+    this.sprite.spriteSheet = spriteSheet;
+    this.sprite.addAnis(animations);
+    this.sprite.anis.frameDelay = 4;
+    this.sprite.changeAni('walk');
+    this.sprite.rotation = rotation;
+    this.sprite.direction = rotation + 270;
+    this.sprite.direction = this.sprite.direction % 360;
+    this.dead = false;
+  }
+
+  walk() {
+    if(this.sprite.x - this.sprite.width/4 < 0 || this.sprite.x + this.sprite.width/4 > width) {
+      this.hitLeftOrRightWall();
+    }
+
+    if(this.sprite.y - this.sprite.height/4 < 0 || this.sprite.y + this.sprite.height/4 > height) {
+      this.hitTopOrBottomWall();
+    }
+
+    this.sprite.speed = speed;
+  }
+
+  stop() {
+    this.sprite.speed = 0;
+    this.sprite.changeAni('stand');
+  }
+
+  hitLeftOrRightWall() {
+    this.sprite.rotation = this.sprite.rotation * -1 + 360;
+    this.sprite.direction = this.sprite.rotation + 270;
+    this.sprite.direction %= 360;
+  }
+
+  hitTopOrBottomWall() {
+    this.sprite.direction = this.sprite.direction * -1 + 360;
+    this.sprite.rotation = this.sprite.direction + 90;
+    this.sprite.rotation %= 360;
+  }
+
+  die() {
+    this.sprite.changeAni(['crushed', 'dead']);
+    this.sprite.speed = 0;
+    this.dead = true;
+    makeBug();
+    score++;
+    speed += 0.1;
+  }
+}
